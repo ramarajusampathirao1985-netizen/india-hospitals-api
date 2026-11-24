@@ -2,6 +2,7 @@ import csv
 import os
 import sqlite3
 import urllib.request
+import zipfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -18,25 +19,41 @@ COLUMNS = [
 
 def obtain_csv():
     if CSV_URL:
-        print("Downloading hospital CSV from HOSPITAL_CSV_URL ...")
+        download_path = BASE_DIR / "hospital_dataset_download"
+        print("Downloading hospital dataset from HOSPITAL_CSV_URL ...")
         request = urllib.request.Request(CSV_URL, headers={"User-Agent": "SarvaSetu-HospitalAPI/1.0"})
-        with urllib.request.urlopen(request, timeout=180) as response, open(CSV_PATH, "wb") as out:
+        with urllib.request.urlopen(request, timeout=240) as response, open(download_path, "wb") as out:
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:
                     break
                 out.write(chunk)
-        print(f"Downloaded CSV to {CSV_PATH}")
+        if zipfile.is_zipfile(download_path):
+            with zipfile.ZipFile(download_path) as archive:
+                candidates = [n for n in archive.namelist() if n.lower().endswith(".csv") and not n.startswith("__MACOSX/")]
+                if not candidates:
+                    raise ValueError("The downloaded ZIP does not contain a CSV file")
+                # Use the first CSV file in the dataset archive.
+                with archive.open(candidates[0]) as source, open(CSV_PATH, "wb") as target:
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        target.write(chunk)
+            print(f"Extracted CSV to {CSV_PATH}")
+        else:
+            download_path.replace(CSV_PATH)
+            print(f"Downloaded CSV to {CSV_PATH}")
     if not CSV_PATH.exists():
         raise FileNotFoundError(
             f"CSV not found: {CSV_PATH}. Set HOSPITAL_CSV_URL to a direct-download URL "
-            "or place sarva_setu_hospitals_app.csv beside this script."
+            "for the CSV or ZIP dataset, or place sarva_setu_hospitals_app.csv beside this script."
         )
 
 def clean(value):
     if value is None:
         return ""
-    return " ".join(str(value).replace("\u0000", "").split())
+    return " ".join(str(value).replace("\\u0000", "").split())
 
 def main():
     obtain_csv()
