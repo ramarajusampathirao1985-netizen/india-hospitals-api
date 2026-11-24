@@ -12,20 +12,23 @@ FastAPI + SQLite backend for searching the India-wide hospital and healthcare-fa
 - `GET /districts?state=Andhra%20Pradesh` – list districts in a state
 - `GET /docs` – interactive Swagger documentation
 
-Examples:
-```
-/hospitals?state=Andhra%20Pradesh&district=Srikakulam&limit=25
-/hospitals?q=government%20hospital&state=Andhra%20Pradesh
-```
+## Dataset
 
-## Dataset required
+The prepared dataset contains 231,379 hospital/facility records and 18 columns:
 
-The CSV must contain these 18 columns:
 `id, name, facility_type, facility_category, ownership, state, district, taluka, locality, street, pincode, latitude, longitude, phone, email, website, open_24x7, specialties`
 
-The three unused columns `tier_level`, `phone_type`, and `phone_shared` are not imported.
+The unused columns `tier_level`, `phone_type`, and `phone_shared` are excluded.
 
-For local use, place the cleaned CSV beside `build_db.py` and name it `sarva_setu_hospitals_app.csv`, then run:
+The API accepts a direct-download CSV URL or ZIP URL through the `HOSPITAL_CSV_URL` environment variable. For the ZIP prepared for this project, upload `sarva_setu_hospitals_dataset.zip` to the repository root, then set:
+
+```
+HOSPITAL_CSV_URL=https://raw.githubusercontent.com/ramarajusampathirao1985-netizen/india-hospitals-api/main/sarva_setu_hospitals_dataset.zip
+```
+
+## Local setup
+
+Place `sarva_setu_hospitals_app.csv` beside `build_db.py`, then run:
 
 ```bash
 pip install -r requirements.txt
@@ -33,12 +36,14 @@ python build_db.py
 uvicorn main:app --reload
 ```
 
-## Deploy on Render
+## Render deployment
 
-1. Push this repository to GitHub.
-2. In Render, create a new Blueprint and select this repository.
-3. When Render asks for `HOSPITAL_CSV_URL`, provide a direct-download URL to the cleaned CSV file. The URL must be reachable by Render without signing in.
-4. Deploy. The build step downloads the CSV and creates `hospitals.db`.
-5. Open the deployed service URL, then `/docs` to test the API.
+1. Upload `sarva_setu_hospitals_dataset.zip` to the root of this GitHub repository.
+2. In Render, create a new Blueprint and select this repository (or deploy the existing Blueprint).
+3. Set the `HOSPITAL_CSV_URL` environment variable to the raw ZIP URL shown above.
+4. Deploy. The build command downloads the ZIP, extracts the CSV, and creates `hospitals.db`.
+5. Open the service URL and visit `/docs` to test the API.
 
-Do not put patient records or private medical information in this directory. This API is only a facility directory. Verify contact details and operating status before relying on them. The free Render service may sleep when idle; use an appropriate paid plan for production reliability. Restrict `CORS_ORIGINS` to the required app/web origins before production.
+The free Render service may sleep when idle. For production reliability, use an appropriate paid plan and persistent storage or an external database. Restrict `CORS_ORIGINS` to the required app/web origins before production.
+
+This API is a facility directory, not a patient-record system. Verify facility contact details and operating status before relying on them.
